@@ -1,0 +1,9 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('보물섬 콘텐츠 관리자') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">보물섬 콘텐츠 관리자</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
