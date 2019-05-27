@@ -1,0 +1,35 @@
+{%  extends "base.html" %}
+
+{% block title %} 보물찾기 관리자 {% endblock %}
+
+{%  block content %}
+	<div style="margin: 10px;">
+
+			<h2 style="text-align: center">
+			보물 찾기 관리자
+			</h2>
+	</div>
+  <div class="row">
+    <div class="col">
+    </div>
+    <div class="col-5">
+        <div class="row" style="height: 20px;"></div>
+        <div class="row">
+            <a href="{%  url 'mysite:mission_map' secretcode_id  %}" class="btn btn-primary btn-lg btn-block"><p>위치</p><p>설정</p></a>
+        </div>
+        <div class="row" style="height: 10px;"></div>
+        <div class="row">
+            <a href="{%  url 'mysite:mission_quiz' secretcode_id %}" class="btn btn-primary btn-lg btn-block"><p>텍스트</p><p>설정</p></a>
+        </div>
+    </div>
+    <div class="col">
+
+    </div>
+  </div>
+	<div style="margin: 10px;">
+			<p style="text-align: center">
+			현재 비밀코드 : {{ secretcode_code }} 로 로그인되어 있습니다.
+			</p>
+			 <a href="{%  url 'mysite:logout' %}" class="btn btn-warning btn-lg btn-block">Logout 하기</a>
+	</div>
+{% endblock %}

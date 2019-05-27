@@ -1,0 +1,204 @@
+{%  extends "base.html" %}
+
+{% block title %} 보물찾기 텍스트설정 {% endblock %}
+
+{%  block content %}
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link " href="{% url 'mysite:select' secretcode_id %}">Home</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'mysite:mission_map' secretcode_id %}">Map</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="#">Quiz</a>
+  </li>
+</ul>
+
+<div id="content"  class="container">
+
+
+
+<div class="alert alert-primary" role="alert">
+    <h5>미션 및 퀴즈 관련 텍스트 설정</h5>
+</div>
+<form>
+<ul class="list-group">
+    <li class="list-group-item">
+      <div class="form-group">
+        <label for="exampleFormControlTextarea1">1.폭탄해제 지령 위치</label>
+          <button type="button" id="btnInitBomMission" class="btn btn-primary btn-sm">기본값</button>
+          <button type="button" id="btnSaveBomMission" class="btn btn-primary btn-sm">전송</button>
+        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3">{{ mission_quiz.bomb_command_location }}</textarea>
+      </div>
+    </li>
+    <li class="list-group-item">
+      <div class="form-group">
+        <label for="exampleFormControlTextarea1">2. 무궁화미션 지령 위치</label>
+          <button type="button" id="btnInitMugunghwaMission" class="btn btn-primary  btn-sm">기본값</button>
+          <button type="button" id="btnSaveMugunghwaMission" class="btn btn-primary btn-sm">전송</button>
+        <textarea class="form-control" id="exampleFormControlTextarea1" rows="3">{{ mission_quiz.mugunghwa_command_location }}</textarea>
+      </div>
+    </li>
+
+
+    {% for quiz in mission_quiz.quiz_set.all %}
+
+    <li class="list-group-item list-group-item-info">
+      <div class="form-group">
+        <label for="exampleFormControlTextarea1">{{ mission_quiz.get_no }}. 퀴즈{{ quiz.quiz_no }} 문제</label>
+          <button type="button" class="btnInitQuiz btn btn-primary btn-sm" q_no="{{ quiz.quiz_no }}">기본값</button>
+          <button type="button" class="btnSaveQuiz btn btn-primary btn-sm" q_no="{{ quiz.quiz_no }}">전송</button>
+          <textarea class="quiz-question form-control" id="exampleFormControlTextarea1" rows="3">{{ quiz.quiz }}</textarea>
+          <label for="exampleFormControlTextarea1"> 퀴즈{{ forloop.counter }} 정답</label>
+          <input type="text" class="quiz-answer form-control" value="{{ quiz.quiz_answer }}">
+          <label for="exampleFormControlTextarea1" >퀴즈{{ forloop.counter }} 오답</label>
+          <input type="text" class="quiz-wrong-answer1 form-control" value="{{ quiz.quiz_wrong_answer1 }}">
+          <label for="exampleFormControlTextarea1"> 퀴즈{{ forloop.counter }} 오답</label>
+          <input type="text" class="quiz-wrong-answer2 form-control" value="{{ quiz.quiz_wrong_answer2 }}">
+      </div>
+    </li>
+    {% endfor %}
+
+    <li class="list-group-item list-group-item-primary">
+<div class="form-group">
+    <label for="exampleFormControlTextarea1">10. 최종 단어 맞추기 미션</label>
+      <button type="button" id="btnInitWord" class="btn btn-primary btn-sm">기본값</button>
+      <button type="button" id="btnSaveWord" class="btn btn-primary btn-sm">전송</button>
+    <div class="row">
+        {% for mf_word in mission_quiz.matchfinalwordmission_set.all %}
+        <div><input type="text" class="word form-control" value="{{ mf_word.word }}" maxlength="3" size="6" word_pk="{{ mf_word.pk }}"></div>
+        {% endfor %}
+    </div>
+
+  </div>
+    </li>
+</ul>
+</form>
+
+
+{%  endblock %}
+</div>
+
+{% block jsScript %}
+<script>
+   $(document).ready(function(){
+
+       //폭탄해체 지령 위치 초기화
+       $("#btnInitBomMission").click(function () {
+            $(this).siblings("textarea").val("{{ values.bomb_command_location }}");
+       });
+
+       //무궁화미션 지령 위치 초기화
+       $("#btnInitMugunghwaMission").click(function () {
+            $(this).siblings("textarea").val("{{ values.mugunghwa_command_location }}");
+       });
+        //퀴즈 초기화
+       $(".btnInitQuiz").click(function(){
+            //alert($(this).attr('q_no'));
+            var q_no = $(this).attr('q_no');
+            var obj = $(this);
+
+            $.ajax({
+                type: "GET",
+                url: "{% url 'mysite:api_quiz' %}",
+                data: {'quiz_no':q_no,  'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                dataType: "json",
+            }).done(function (data) {
+                obj.siblings('.quiz-question').val(data['quiz']);
+                obj.siblings('.quiz-answer').val(data['answer']);
+                obj.siblings('.quiz-wrong-answer1').val(data['answer_w1']);
+                obj.siblings('.quiz-wrong-answer2').val(data['answer_w2']);
+            }).fail(function () {
+
+            });
+       });
+       //단어 초기화
+       $("#btnInitWord").click(function () {
+           var words = '{{ values.get_words }}'.split('|');
+           var i=0;
+           $(".word").each(function () {
+               $(this).val(words[i]);
+               i++;
+           });
+       });
+
+       //폭탄해체 지령 위치 저장
+       $("#btnSaveBomMission").click(function () {
+            console.log($(this).siblings("textarea").val());
+            $.ajax({
+                type: "POST",
+                url: "{% url 'mysite:api_save_mission' mission_quiz.secret_code_id %}",
+                data: {"TYPE":"B", "bomb_command_location":$(this).siblings("textarea").val(), 'csrfmiddlewaretoken': '{{ csrf_token }}'}
+            }).done(function (data) {
+
+            }).fail(function () {
+
+            })
+       });
+
+       //무궁화미션 지령 위치 저장
+       $("#btnSaveMugunghwaMission").click(function () {
+            console.log($(this).siblings("textarea").val());
+            $.ajax({
+                type: "POST",
+                url: "{% url 'mysite:api_save_mission' mission_quiz.secret_code_id %}",
+                data: {"TYPE":"M", "mugunghwa_command_location":$(this).siblings("textarea").val(), 'csrfmiddlewaretoken': '{{ csrf_token }}'}
+            }).done(function (data) {
+
+            }).fail(function () {
+
+            })
+       });
+
+       //퀴즈 저장
+       $(".btnSaveQuiz").click(function () {
+           var obj = $(this);
+           var d = {
+                'quiz_no':obj.attr('q_no'),
+                'question':obj.siblings('.quiz-question').val(),
+                'answer':obj.siblings('.quiz-answer').val(),
+                'quiz-wrong-answer1':obj.siblings('.quiz-wrong-answer1').val(),
+                'quiz-wrong-answer2':obj.siblings('.quiz-wrong-answer2').val(),
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+           }
+
+           $.ajax({
+                type: "POST",
+                url: "{% url 'mysite:api_save_quizs' mission_quiz.secret_code_id %}",
+                data: d
+           }).done(function (data) {
+
+           }).fail(function () {
+
+           })
+       });
+
+       //단어 저장
+       $("#btnSaveWord").click(function () {
+           var obj = $(this);
+           var wordlist = "";
+           $(".word").each(function () {
+                wordlist = wordlist + $(this).attr("word_pk") + "|" + $(this).val() + ",";
+           });
+
+           var d = {
+               "wordlist":wordlist,
+               'csrfmiddlewaretoken': '{{ csrf_token }}'
+           };
+
+           $.ajax({
+                type: "POST",
+                url: "{% url 'mysite:api_save_words' mission_quiz.secret_code_id %}",
+                data: d,
+           }).done(function (data) {
+
+           }).fail(function () {
+
+           })
+       });
+
+
+   });
+</script>
+{% endblock %}

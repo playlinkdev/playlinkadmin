@@ -1,0 +1,358 @@
+{%  extends "base.html" %}
+
+{% block title %} 보물찾기 지도설정 {% endblock %}
+{% block style %}
+
+    #map {
+        height: 100%;
+    }
+
+	html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    #pac-input {
+
+    }
+	#btnCurLoc {
+		position: absolute;
+		bottom:100px;
+		right:30px;
+		width: 60px;
+		height: 60px;
+	}
+
+{% endblock %}
+{%  block content %}
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <a class="nav-link " href="{% url 'mysite:select' secretcode_id %}">Home</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="#">Map</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{% url 'mysite:mission_quiz' secretcode_id %}">Quiz</a>
+  </li>
+</ul>
+    <div id="content"  class="container" style="height: 100%" >
+        <input id="pac-input" class="form-control" type="text" placeholder="Search Box"/>
+        <div id="map"></div>
+		<button id="btnCurLoc" type="button" class="btn btn-primary">현재<p/>위치</button>
+
+    </div>
+
+<!-- Button trigger modal -->
+<button id="btnModal" type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal" style="display: none;">
+  Launch demo modal
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel" style="text-align: center;padding: 20px;">
+            아래 버튼을 클릭하면 해당 미션의
+            스타트 지점으로 설정됩니다.​
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="row" style="padding: 10px;">
+            <div class="col">
+                <button type="button" class="btnSetGps btn btn-{{ btnStyle.btnStyle1 }} btn-lg btn-block" gps_no="1">
+	                1. 폭탄해제미션
+	                <span class="badge badge-light">
+		                {% if btnStyle.btnStyle1 == 'primary' %}
+			                X
+			                {% else %}
+		                    O
+		                {% endif %}
+	                </span>
+                </button>
+            </div>
+            <div class="col">
+                <button type="button" class="btnSetGps btn btn-{{ btnStyle.btnStyle2 }} btn-lg btn-block" gps_no="2">
+	                2. 대결미션
+	                <span class="badge badge-light">
+		                {% if btnStyle.btnStyle2 == 'primary' %}
+			                X
+			                {% else %}
+		                    O
+		                {% endif %}
+	                </span>
+                </button>
+            </div>
+        </div>
+
+        <div class="row" style="padding: 10px;">
+            <div class="col">
+                <button type="button" class="btnSetGps btn btn-{{ btnStyle.btnStyle3 }} btn-lg btn-block" gps_no="3">
+	                3. 업다운미션
+	                <span class="badge badge-light">
+		                {% if btnStyle.btnStyle3 == 'primary' %}
+			                X
+			                {% else %}
+		                    O
+		                {% endif %}
+	                </span>
+                </button>
+            </div>
+            <div class="col">
+                <button type="button" class="btnSetGps btn btn-{{ btnStyle.btnStyle4 }} btn-lg btn-block" gps_no="4">
+	                4. 무궁화미션
+	                <span class="badge badge-light">
+		                {% if btnStyle.btnStyle4 == 'primary' %}
+			                X
+			                {% else %}
+		                    O
+		                {% endif %}
+	                </span>
+                </button>
+            </div>
+        </div>
+      </div>
+	    <input type="hidden" id="gps_lat"/><input type="hidden" id="gps_lng"/>
+      <div class="modal-footer">
+	      <button type="button" class="btnReset btn btn-secondary btn-lg btn-block" >초기화</button>
+	      <br>
+	      <button type="button" class="btn btn-secondary btn-lg btn-block" data-dismiss="modal">취소</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{%  endblock %}
+{% block jsScript %}
+<script>
+
+	$("#btnCurLoc").click(function () {
+		setCurrentLocation();
+	});
+
+	$(".btnSetGps").click(function(){
+		$.ajax({
+	        type: "POST",
+	        url: "{% url 'mysite:api_save_mission_map' secretcode_id %}",
+	        data: {'GPS_N':$(this).attr("gps_no"),'GPS_LNG': $("#gps_lng").val() , 'GPS_LAT':$("#gps_lat").val(),  'csrfmiddlewaretoken': '{{ csrf_token }}'}
+	    }).done(function (data) {
+			location.reload();
+	    }).fail(function () {
+
+	    });
+	});
+
+	$(".btnReset").click(function () {
+	    $.ajax({
+	        type: "POST",
+	        url: "{% url 'mysite:api_reset_mission_map' secretcode_id %}",
+	        data: {'csrfmiddlewaretoken': '{{ csrf_token }}'}
+	    }).done(function (data) {
+			location.reload();
+	    }).fail(function () {
+
+	    });
+    })
+
+
+	var infoWindow;
+
+	var map;
+    var gps_marker = ["1|{{ mission_map.loc_mission1_gps_lat }}|{{ mission_map.loc_mission1_gps_lng }}",
+                      "2|{{ mission_map.loc_mission2_gps_lat }}|{{ mission_map.loc_mission2_gps_lng }}",
+	                  "3|{{ mission_map.loc_mission3_gps_lat }}|{{ mission_map.loc_mission3_gps_lng }}",
+                      "4|{{ mission_map.loc_mission4_gps_lat }}|{{ mission_map.loc_mission4_gps_lng }}"];
+    var markers = [];
+
+
+
+    function initMap() {
+
+
+
+      var haightAshbury = {lat: 37.769, lng: -122.446};
+
+
+      map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 18,
+	      mapTypeControl: false,
+	      streetViewControl: false,
+	      center: haightAshbury
+	  });
+
+
+      infoWindow = new google.maps.InfoWindow;
+
+      setCurrentLocation();
+
+      // This event listener will call addMarker() when the map is clicked.
+	  map.addListener('click', function(e) {
+	      console.log(e.latLng.lng());
+          console.log(e.latLng.lat());
+          $("#gps_lng").val(e.latLng.lng());
+          $("#gps_lat").val(e.latLng.lat());
+
+          $("#btnModal").trigger('click');
+
+	      addMarker(event.latLng,'A');
+      });
+
+	  // Adds a marker at the center of the map.
+      addMarker(haightAshbury,'현재위치');
+
+
+      //기존에 저장된 위치값을 가져온다.
+      gps_marker.forEach(function(loc){
+        console.log(loc);
+        var l = loc.split("|");
+        if(l[1] != "0"){
+			console.log(map);
+			var latLng = {lat: Number(l[1]),lng: Number(l[2])};
+
+			addMarker(latLng,loc[0]);
+        }
+      });
+
+
+      //검색창관련..
+      var input = document.getElementById('pac-input');
+      var searchBox = new google.maps.places.SearchBox(input);
+      map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+      // Bias the SearchBox results towards current map's viewport.
+	  map.addListener('bounds_changed', function() {
+	      searchBox.setBounds(map.getBounds());
+      });
+
+
+	  //검색후 변경되는거 적용하기
+	  searchBox.addListener('places_changed', function() {
+	      var places = searchBox.getPlaces();
+
+	      if (places.length == 0) {
+	        return;
+	      }
+
+	      // Clear out the old markers.
+	      markers.forEach(function(marker) {
+	        marker.setMap(null);
+	      });
+	      markers = [];
+
+	      // For each place, get the icon, name and location.
+	      var bounds = new google.maps.LatLngBounds();
+	      places.forEach(function(place) {
+	        if (!place.geometry) {
+	          console.log("Returned place contains no geometry");
+	          return;
+	        }
+	        var icon = {
+	          url: place.icon,
+	          size: new google.maps.Size(71, 71),
+	          origin: new google.maps.Point(0, 0),
+	          anchor: new google.maps.Point(17, 34),
+	          scaledSize: new google.maps.Size(25, 25)
+	        };
+
+	        // Create a marker for each place.
+	        markers.push(new google.maps.Marker({
+	          map: map,
+	          icon: icon,
+	          title: place.name,
+	          position: place.geometry.location
+	        }));
+
+	        if (place.geometry.viewport) {
+	          // Only geocodes have viewport.
+	          bounds.union(place.geometry.viewport);
+	        } else {
+	          bounds.extend(place.geometry.location);
+	        }
+	      });
+	      map.fitBounds(bounds);
+	  });
+
+
+
+
+
+
+    }
+
+    // Adds a marker to the map and push to the array.
+    function addMarker(location,p) {
+      var marker = new google.maps.Marker({
+          position: location,
+          map: map,
+	      label: p
+      });
+
+      markers.push(marker);
+    }
+
+	function deleteMarkers() {
+        clearMarkers();
+        markers = [];
+    }
+
+    function clearMarkers() {
+        setMapOnAll(null);
+    }
+
+    function setMapOnAll(map) {
+        for (var i = 0; i < markers.length; i++) {
+            markers[i].setMap(map);
+        }
+    }
+
+    var geo_options = {
+	  enableHighAccuracy: true,
+	  maximumAge        : 30000,
+	  timeout           : 27000
+	};
+
+    function setCurrentLocation() {
+		console.log('1');
+	    if (navigator.geolocation) {
+	          //navigator.geolocation.getCurrentPosition(function(position) {
+		        navigator.geolocation.watchPosition(function(position) {
+
+		            var pos = {
+		              lat: position.coords.latitude,
+			          lng: position.coords.longitude
+		            };
+
+				    infoWindow.setPosition(pos);
+                    infoWindow.setContent('현재위치 ');
+                    infoWindow.open(map);
+                    map.setCenter(pos);
+	          }, function() {
+
+	            handleLocationError(true, infoWindow, map.getCenter());
+	        }, geo_options);
+	    }else {
+	      // Browser doesn't support Geolocation
+
+	      handleLocationError(false, infoWindow, map.getCenter());
+	    }
+    }
+
+
+    function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+        infoWindow.setPosition(pos);
+        infoWindow.setContent(browserHasGeolocation ?
+                          'Error: The Geolocation service failed.' :
+                          'Error: Your browser doesn\'t support geolocation.');
+        infoWindow.open(map);
+    }
+
+
+
+</script>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAEokXNUMM8CbbbgaCy7sIkK7V4Wp05NnE&libraries=places&callback=initMap"></script>
+{% endblock %}

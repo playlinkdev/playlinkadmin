@@ -1,0 +1,19 @@
+{%  extends "base.html" %}
+
+{% block title %} 보물찾기 관리자 {% endblock %}
+
+{%  block content %}
+          <div style="height: 50px"></div>
+        <h1 style="text-align: center">보물섬 관리자</h1>
+          <div style="height: 50px"></div>
+        <form action="{%  url 'mysite:login'  %}" method="post">
+            {%  csrf_token %}
+            <input type="text" name="code" id="code" class="form-control"  placeholder="비밀코드를 입력하세요.">
+            <br>
+            <input type="submit" class="btn btn-primary btn-lg btn-block" value="확인" />
+        </form>
+	{% if error_message %}
+		<br><br>
+	<p style="text-align: center;color: red;"><strong>{{ error_message }}</strong></p>
+	{% endif %}
+{%  endblock %}
